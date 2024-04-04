@@ -1,11 +1,21 @@
 ##### Depth data analysis ----
 
-
+library(tidyverse)
+library(dslabs)
 
 ##### 1. Mean daily depths values --------
-setwd()
+setwd("C:/Users/Usuario/TFM/Scripts")
 
-tracking_data <-read.csv("Tracking data in out west.csv")
+tracking_data <-read.csv("data/Tracking data in out west.csv")
+
+summary(tracking_data$Max.Dive)
+
+table(tracking_data$inout)
+table(tracking_data$id)
+
+tracks_in<-subset(tracking_data, inout=="in")
+tracks_out<-subset(tracking_data, inout=="out")
+tracks_inout<- rbind(tracks_in, tracks_out)
 
 
 ### Colours
@@ -24,16 +34,16 @@ par(mfrow=c(3,1))
 plot(tracking_data$Max.Dive~tracking_data$Long,  ylim=c(500,0), xlim=c(-9, -5), pch = 19, col=factor(tracking_data$id), main = "Bluefin Tuna depths", ylab = "Max dive", xlab= "Long")
 rug(c(-5.95, -5.3), col = "red")
 
-plot(track_in$Max.Dive~track_in$Long, ylim=c(500,0), xlim=c(-9, -5), pch = 19, col=factor(track_in$id), main = "Bluefin Tuna depths | Direction 'IN'", ylab = "Max dive", xlab= "Long")
+plot(tracks_in$Max.Dive~tracks_in$Long, ylim=c(500,0), xlim=c(-9, -5), pch = 19, col=factor(tracks_in$id), main = "Bluefin Tuna depths | Direction 'IN'", ylab = "Max dive", xlab= "Long")
 rug(c(-5.95, -5.3), col = "red")
 
 par(mar=c(4, 4, 1.5, 1))
 
-plot(track_out$Max.Dive~track_out$Long,  ylim=c(500,0), xlim=c(-9, -5), pch = 19, col=factor(track_out$id), main = "Bluefin Tuna depths | Direction 'OUT'", ylab = "Max dive", xlab= "Long")
+plot(tracks_out$Max.Dive~tracks_out$Long,  ylim=c(500,0), xlim=c(-9, -5), pch = 19, col=factor(tracks_out$id), main = "Bluefin Tuna depths | Direction 'OUT'", ylab = "Max dive", xlab= "Long")
 rug(c(-5.95, -5.3), col = "red")
 
 
-boxplot(tracking_data$Max.Dive~tracking_data$inout, ylab = "depth", xlab = "Direction", main = "Bluefin Tuna depths")
+boxplot(tracking_data$Max.Dive~tracking_data$inout,  ylim=c(500,0),ylab = "depth", xlab = "Direction", main = "Bluefin Tuna max.dives")
 stripchart(tracking_data$Max.Dive~tracking_data$inout, vertical = TRUE, method = "jitter",
            pch = 19, add = TRUE, col = c("blue","red"))
 
@@ -72,11 +82,14 @@ ggplot(data = tracking_data) +
     fun = mean
   ) + geom_smooth(data = tracking_data, aes(x = inout, y = Max.Dive) )
 
+tracks_in<-subset(tracks_in, Max.Dive>=0)
 
-
-hist(track_in$Max.Dive, col = c1, breaks = 15, main ="Max Dives", xlab="Depth", xlim = c(0, 600))
-hist(track_out$Max.Dive, col = c2, breaks = 20, add=TRUE)
+hist(tracks_in$Max.Dive, col = c1, breaks = 15, main ="Max Dives", xlab="Depth", xlim = c(0, 600))
+hist(tracks_out$Max.Dive, col = c2, breaks = 20, add=TRUE)
 legend(0, 4, c("IN", "OUT"), fill = c(c1,c2))
+
+plot(density(tracks_in$Max.Dive), main ="Max Dives", xlab="Depth", xlim = c(0, 600))
+plot(density(tracks_out$Max.Dive))
 
 range(tracking_data$Max.Dive)
 
@@ -84,7 +97,7 @@ range(tracking_data$Max.Dive)
 
 #### 2. Migratun files (GPE3 data) ----
 
-setwd("C:/Users/Usuario/Desktop/marcas migratun")
+setwd("C:/Users/Usuario/TFM/marcas migratun")
 
 
 #exploring files with diving data---------- 
@@ -100,14 +113,48 @@ head(read.csv("86440/86440-MinMaxDepth.csv"))
 #
 GPEdata<-read.csv2("GPEsst study area.csv2") #data of tracking corresponding to the study area
 GPEdata$Date #dates of occurence in the study area
-table(GPEdata$DeployID, GPEdata$ddmmyy ) #dates and resepctive individuals 
+table(GPEdata$DeployID) #dates and resepctive individuals 
 
 #imorting files of interest
 depth1<-read.csv("61125/61125-Series.csv")
 depth1<-depth1[,1:14]
+asdf<-read.csv("61125/61125-1-GPE3.csv", skip = 5)
 depth2<-read.csv("61127/61127-Series.csv", skip = 2)
 depth3<-read.csv("72498/72498-Series.csv", skip = 2)
 depth4<-read.csv("72499/72499-Series.csv")
+
+depth5<-read.csv("86437/86437-MinMaxDepth.csv")
+depth5<-depth5[,c(1,5,9:14)]
+
+locations86437<-read.csv("86437/86437-Locations.csv")
+locations86437<-locations86437[,c(4,7,8)]
+
+head(locations86437)
+
+depth86437<-right_join(locations86437,depth5, by = "Date")
+depth86437[, c(1,)]
+
+as.Date(depth86437$Date, format= "%Y-%m-%d")
+
+
+depthseries$Day<- as.POSIXct(depthseries$Day, format =  "%d-%b-%Y")
+
+depth86437$ddmmyyyy<-as.Date(depth86437$Date, format=  "%d-%m-%Y")
+
+for (i in 1:length(depth86437$Date)) {
+  
+
+
+if(depth86437$Date[i]==locations86437$Date[i]){
+  
+  depth86437$Latitude[i]<-locations86437$Latitude[i]; 
+  depth86437$Latitude[i]<-locations86437$Latitude[i]
+  
+}
+
+}
+  
+table(depth5$Date)
 
 depthseries<- rbind(depth1, depth2, depth3, depth4)
 
@@ -130,6 +177,11 @@ t1$Day<- gsub("-Oct-","-10-",t1$Day)
 t1$Day<- gsub("-Nov-","-11-",t1$Day)
 
 t1$fecha<-as.Date(t1$Day, format=  "%d-%m-%Y")
+
+head(t1)
+
+t1$fecha <- as.Date(t1$fecha)
+t1$fecha <- as.POSIXct(paste(t1$fecha, t1$Time), format = "%Y-%m-%d %H:%M:%S")
 
 
 table(GPEdata$DeployID, GPEdata$ddmmyy) #dates and respective individuals of interest
@@ -161,8 +213,10 @@ str(track_depths)
 surfacedepths <- subset(track_depths, Depth <40)
 range(surfacedepths$Depth)
 
+head(surfacedepths)
+
 plot(surfacedepths$Depth, col=surfacedepths$DeployID, ylim = c(40, 0) )
-legend("topright", c("id61125", "id61127", "id72498"), fill=surfacedepths$DeployID)
+legend("topright", c("id61125", "id61127", "id72498"), fill=as.factor(surfacedepths$DeployID))
 
 par(mar=c(4, 4, 2, 1))
 plot(id61125$Depth, col= c2, pch = 19, ylim = c(40,0), xlim = c(0, 250), ylab = "Depth (m)", xaxt="n", xlab = "Time")
@@ -221,6 +275,25 @@ abline(h=31.5)
 abline(h=127.5)
 abline(h=176.5)
 
+#serie temporal----
+
+head(track_depths)
+
+#convertir la columna 'fecha' a formato de fecha si aún no lo está
+track_depths$fecha <- as.Date(track_depths$fecha)
+track_depths$fecha <- as.POSIXct(paste(track_depths$fecha, track_depths$Time), format = "%Y-%m-%d %H:%M:%S")
+
+# Filtrar los datos para los IDs de interés
+ids_interes <- c(id61125, id61127, id72498)
+data_interes <- track_depths
+
+# Crear gráfico para cada ID en una sola figura
+ggplot(track_depths, aes(x = fecha, y = Depth)) +
+  geom_line() +
+  labs(x = "", y = "Depth (m)", title = "Depth time series") +
+  facet_wrap(~ as.factor(DeployID), scales = "free", ncol = 1) +  # Panel separado para cada ID
+  scale_y_reverse() +
+  theme_minimal()
 
 
 #statistical summaries and analysis-----
@@ -358,3 +431,7 @@ track72498<-subset(GPEdata, DeployID == "72498")
 track72498$yday <- yday(track72498$ddmmyy)
 
 mainMap + geom_point(data = track72498, aes(x = Most.Likely.Longitude, y = Most.Likely.Latitude), size=1.5) +  geom_label_repel(data = track72498, aes(x = Most.Likely.Longitude, y = Most.Likely.Latitude, label = track72498$yday, colour = "black"),  alpha = 0.7,  show.legend=F,  force = 2, box.padding   = 0.8,  point.padding = 0.3, label.size =0.2, segment.color = 'grey50', label.r = 0.2, direction= "x")  +  theme(legend.position="none") +labs(title = "61127 locations")
+
+
+#Depths time series
+
